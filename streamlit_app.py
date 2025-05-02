@@ -1,115 +1,118 @@
 import streamlit as st
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+import pandas as pd
+import plotly.graph_objects as go
+import os
 
-# Page config
+# Set page config
 st.set_page_config(page_title="Spotify Audio Feature Explorer", layout="wide")
 
-# Setup SpotifyOAuth using Streamlit secrets
-sp_oauth = SpotifyOAuth(
-    client_id=st.secrets["spotify"]["client_id"],
-    client_secret=st.secrets["spotify"]["client_secret"],
-    redirect_uri=st.secrets["spotify"]["redirect_uri"],
+# --- AUTHENTICATION ---
+# Setup Spotify Auth
+auth_manager = SpotifyOAuth(
+    client_id=st.secrets["SPOTIPY_CLIENT_ID"],
+    client_secret=st.secrets["SPOTIPY_CLIENT_SECRET"],
+    redirect_uri=st.secrets["SPOTIPY_REDIRECT_URI"],
     scope="user-library-read playlist-read-private user-top-read",
-    cache_path=".cache"  # optional: avoids repeated login
+    show_dialog=True,
+    open_browser=False,
+    cache_path=".cache"
 )
 
-# Handle token retrieval
-token_info = sp_oauth.get_access_token(as_dict=False)
-if not token_info:
-    st.error("Unable to authenticate with Spotify.")
+# Check for authentication token
+try:
+    token_info = auth_manager.get_cached_token()
+    if not token_info:
+        auth_url = auth_manager.get_authorize_url()
+        st.markdown(f"[Click here to authenticate with Spotify]({auth_url})")
+        st.stop()
+
+    sp = spotipy.Spotify(auth_manager=auth_manager)
+except Exception as e:
+    st.error(f"Spotify authentication failed: {e}")
     st.stop()
 
-# Initialize Spotify client
-sp = spotipy.Spotify(auth=token_info)
-
-# Fetch user info
-user = sp.current_user()
-st.sidebar.image(user['images'][0]['url'], width=100) if user.get('images') else None
-st.sidebar.markdown(f"### {user['display_name']}")
-st.sidebar.write(f"ID: `{user['id']}`")
-
-# Fetch user playlists
-playlists = sp.current_user_playlists(limit=50)
-
-playlist_options = {pl['name']: pl['id'] for pl in playlists['items']}
-selected_name = st.selectbox("🎵 Choose a playlist", playlist_options.keys())
-selected_id = playlist_options[selected_name]
-
-st.write(f"Selected playlist: `{selected_name}` (`{selected_id}`)")
-
-import pandas as pd
-
-# Get tracks from the selected playlist
+# --- HELPER FUNCTIONS ---
 def get_tracks_from_playlist(playlist_id):
     results = sp.playlist_tracks(playlist_id)
     tracks = results['items']
-    
-    # Paginate if more than 100 tracks
     while results['next']:
         results = sp.next(results)
         tracks.extend(results['items'])
-    
-    # Extract track info
+
     track_data = []
     for item in tracks:
         track = item['track']
-        if track:  # filter out missing
+        if track and track['id']:
             track_data.append({
                 'name': track['name'],
                 'id': track['id'],
                 'artist': track['artists'][0]['name'] if track['artists'] else 'Unknown',
                 'album': track['album']['name'] if track['album'] else 'Unknown'
             })
-    
     return pd.DataFrame(track_data)
 
-# Get audio features for a list of track IDs
 def get_audio_features(track_ids):
     features = sp.audio_features(tracks=track_ids)
     return pd.DataFrame(features)
 
-# Get track list and audio features
-with st.spinner("Fetching tracks and audio features..."):
-    track_df = get_tracks_from_playlist(selected_id)
-    audio_df = get_audio_features(track_df['id'].tolist())
+def process_playlist(playlist_id):
+    tracks = get_tracks_from_playlist(playlist_id)
+    features = get_audio_features(tracks['id'].tolist())
+    return pd.merge(tracks, features, on='id')
 
-# Merge track info with audio features
-merged_df = pd.merge(track_df, audio_df, left_on='id', right_on='id')
-display_cols = ['name', 'artist', 'danceability', 'energy', 'valence', 'tempo']
-st.subheader("🎧 Audio Features")
-st.dataframe(merged_df[display_cols].round(2))
+# --- MAIN APP ---
+st.title("🎶 Spotify Audio Feature Explorer")
 
-import plotly.graph_objects as go
+# Get user playlists
+playlists = sp.current_user_playlists(limit=50)
+playlist_options = {pl['name']: pl['id'] for pl in playlists['items']}
 
-# Let user pick a track
-selected_track = st.selectbox("🎵 Choose a track to explore", merged_df['name'])
+# Select two playlists to compare
+col1, col2 = st.columns(2)
+with col1:
+    playlist_1_name = st.selectbox("🎧 Playlist 1", playlist_options.keys(), key="pl1")
+with col2:
+    playlist_2_name = st.selectbox("🎼 Playlist 2", playlist_options.keys(), key="pl2")
 
-track_row = merged_df[merged_df['name'] == selected_track].iloc[0]
-features_to_plot = ['danceability', 'energy', 'valence', 'acousticness', 'liveness', 'speechiness']
+playlist_1_id = playlist_options[playlist_1_name]
+playlist_2_id = playlist_options[playlist_2_name]
 
-# 🎯 RADAR CHART for a single track
-fig_radar = go.Figure()
+with st.spinner("Fetching and comparing playlists..."):
+    df1 = process_playlist(playlist_1_id)
+    df2 = process_playlist(playlist_2_id)
 
-fig_radar.add_trace(go.Scatterpolar(
-    r=[track_row[feature] for feature in features_to_plot],
-    theta=features_to_plot,
+    features = ['danceability', 'energy', 'valence', 'acousticness', 'liveness', 'speechiness']
+    avg1 = df1[features].mean()
+    avg2 = df2[features].mean()
+
+# --- RADAR CHART ---
+fig_compare = go.Figure()
+
+fig_compare.add_trace(go.Scatterpolar(
+    r=avg1.values,
+    theta=features,
     fill='toself',
-    name=selected_track
+    name=playlist_1_name
+))
+fig_compare.add_trace(go.Scatterpolar(
+    r=avg2.values,
+    theta=features,
+    fill='toself',
+    name=playlist_2_name
 ))
 
-fig_radar.update_layout(
+fig_compare.update_layout(
     polar=dict(radialaxis=dict(visible=True, range=[0,1])),
-    showlegend=False,
-    title=f"🎯 Audio Profile: {selected_track}"
+    title="🔁 Playlist Comparison: Audio Feature Profiles"
 )
 
-st.plotly_chart(fig_radar, use_container_width=True)
+st.plotly_chart(fig_compare, use_container_width=True)
 
-# 📊 BAR CHART for average across playlist
-avg_features = merged_df[features_to_plot].mean().round(2)
+# --- OPTIONAL TRACK TABLES ---
+with st.expander("🔍 Playlist 1 Tracks"):
+    st.dataframe(df1[['name', 'artist', 'danceability', 'energy', 'valence']].round(2))
 
-fig_bar = go.Figure([go.Bar(x=avg_features.index, y=avg_features.values)])
-fig_bar.update_layout(title="📊 Average Audio Features in Playlist", yaxis=dict(range=[0, 1]))
-st.plotly_chart(fig_bar, use_container_width=True)
-
+with st.expander("🔍 Playlist 2 Tracks"):
+    st.dataframe(df2[['name', 'artist', 'danceability', 'energy', 'valence']].round(2))
