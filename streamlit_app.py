@@ -35,13 +35,13 @@ auth_manager = SpotifyOAuth(
 
 # Handle authentication and token management
 if "token_info" not in st.session_state:
-    code = st.experimental_get_query_params().get("code", [None])[0]
+    code = st.query_params().get("code", [None])[0]
 
     if code:
         token_info = auth_manager.get_access_token(code, as_dict=True)
         if token_info:
             st.session_state.token_info = token_info
-            st.experimental_set_query_params()  # Clear code from URL
+            st.query_params()  # Clear code from URL
         else:
             st.error("Authentication failed. Please try again.")
             st.stop()
