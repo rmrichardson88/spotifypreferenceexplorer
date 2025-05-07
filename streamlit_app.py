@@ -7,7 +7,9 @@ st.set_page_config(page_title="Spotify Preference Explorer", layout="wide")
 
 # --- AUTHENTICATION SETUP ---
 
-class StreamlitOAuthCache:
+from spotipy.cache_handler import CacheHandler
+
+class StreamlitOAuthCache(CacheHandler):
     def __init__(self):
         self.token_info = None
 
@@ -16,6 +18,7 @@ class StreamlitOAuthCache:
 
     def save_token_to_cache(self, token_info):
         self.token_info = token_info
+
 
 # Initialize cache handler
 cache_handler = StreamlitOAuthCache()
