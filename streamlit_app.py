@@ -4,6 +4,7 @@ from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 import time
 import plotly.express as px
+import os
 
 # Set page config
 st.set_page_config(page_title="Spotify Preference Explorer", layout="wide")
@@ -13,6 +14,19 @@ st.sidebar.title("Spotify Authentication")
 client_id = st.secrets["SPOTIPY_CLIENT_ID"]
 client_secret = st.secrets["SPOTIPY_CLIENT_SECRET"]
 redirect_uri = st.secrets["SPOTIPY_REDIRECT_URI"]
+
+# Sign-out button
+if st.sidebar.button("🔄 Sign Out and Re-authenticate"):
+    try:
+        os.remove(".cache")
+    except FileNotFoundError:
+        pass
+    st.success("Cache cleared. Please reload to log in again.")
+    st.info("If you're not prompted to log in again, try clearing your browser's Spotify cookies or using a private/incognito window.")
+    try:
+        st.rerun()
+    except AttributeError:
+        st.experimental_rerun()
 
 # Authenticate with Spotify
 scope = "user-top-read"
@@ -25,15 +39,12 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
     cache_path=".cache"
 ))
 
-# Allow user to sign out and re-authenticate
-if st.sidebar.button("🔄 Sign Out and Re-authenticate"):
-    import os
-    try:
-        os.remove(".cache")
-    except FileNotFoundError:
-        pass
-    st.success("Cache cleared. Please reload to log in again.")
-    st.experimental_rerun()
+# Show logged in user
+try:
+    user_profile = sp.current_user()
+    st.sidebar.markdown(f"👤 Logged in as: `{user_profile['display_name']}`")
+except:
+    st.sidebar.warning("Unable to fetch profile info.")
 
 # Get time range selection
 time_range = st.sidebar.radio(
@@ -66,8 +77,6 @@ if not top_tracks or not top_tracks.get("items"):
 track_data = []
 for idx, item in enumerate(top_tracks["items"]):
     features = sp.audio_features([item["id"]])[0]
-    if features is None:  # 🔧 SAFEGUARD against missing features
-        continue
     track_data.append({
         "Track Name": item["name"],
         "Artist": item["artists"][0]["name"],
@@ -76,8 +85,7 @@ for idx, item in enumerate(top_tracks["items"]):
         "Valence": features["valence"],
         "Tempo": features["tempo"],
         "Popularity": item["popularity"],
-        "Track ID": item["id"],
-        "Preview URL": item.get("preview_url")  # 🔧 Add preview URL if available
+        "Track ID": item["id"]
     })
 
 df = pd.DataFrame(track_data)
@@ -87,18 +95,12 @@ selected_track_name = st.selectbox("🎵 Select a track to highlight", df["Track
 
 # Get corresponding ID and update query params
 selected_track_id = df[df["Track Name"] == selected_track_name]["Track ID"].values[0]
-st.experimental_set_query_params(track_id=selected_track_id)  # 🔧 Use experimental method for query param
+st.query_params.update({"track_id": selected_track_id})
 
 # 2D Feature Scatterplot
 st.subheader("🔍 Audio Feature Scatterplot")
-
-# 🔧 Place X/Y selectors in columns for better layout
-col1, col2 = st.columns(2)
-with col1:
-    x_feature = st.selectbox("X-axis", ["Danceability", "Energy", "Valence", "Tempo", "Popularity"], index=0)
-with col2:
-    y_feature_options = [feat for feat in ["Danceability", "Energy", "Valence", "Tempo", "Popularity"] if feat != x_feature]
-    y_feature = st.selectbox("Y-axis", y_feature_options, index=0)
+x_feature = st.selectbox("X-axis", ["Danceability", "Energy", "Valence", "Tempo", "Popularity"], index=0)
+y_feature = st.selectbox("Y-axis", ["Energy", "Valence", "Danceability", "Tempo", "Popularity"], index=1)
 
 fig = px.scatter(
     df,
@@ -125,11 +127,6 @@ fig.add_scatter(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# 🔧 Optional: Audio preview
-if selected_row.get("Preview URL"):
-    st.subheader("▶️ Track Preview")
-    st.audio(selected_row["Preview URL"])
-
 # Display data table
 with st.expander("📋 View Raw Data"):
-    st.dataframe(df.drop(columns=["Track ID", "Preview URL"]))
+    st.dataframe(df.drop(columns=["Track ID"]))
