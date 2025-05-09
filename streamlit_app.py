@@ -2,7 +2,6 @@ import streamlit as st
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
-import time
 import plotly.express as px
 import os
 
@@ -15,38 +14,44 @@ client_id = st.secrets["SPOTIPY_CLIENT_ID"]
 client_secret = st.secrets["SPOTIPY_CLIENT_SECRET"]
 redirect_uri = st.secrets["SPOTIPY_REDIRECT_URI"]
 
-# Sign-out button
-if st.sidebar.button("🔄 Sign Out and Re-authenticate"):
-    try:
-        os.remove(".cache")
-    except FileNotFoundError:
-        pass
-    st.success("Cache cleared. Please reload to log in again.")
-    st.info("If you're not prompted to log in again, try clearing your browser's Spotify cookies or using a private/incognito window.")
-    try:
-        st.rerun()
-    except AttributeError:
-        st.experimental_rerun()
-
 # Authenticate with Spotify
 scope = "user-top-read"
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+auth_manager = SpotifyOAuth(
     client_id=client_id,
     client_secret=client_secret,
     redirect_uri=redirect_uri,
     scope=scope,
     show_dialog=True,
     cache_path=".cache"
-))
+)
 
-# Show logged in user
-try:
-    user_profile = sp.current_user()
-    st.sidebar.markdown(f"👤 Logged in as: `{user_profile['display_name']}`")
-except:
-    st.sidebar.warning("Unable to fetch profile info.")
+# Sign-out button
+if st.sidebar.button("🔒 Sign Out"):
+    try:
+        os.remove(".cache")
+    except FileNotFoundError:
+        pass
+    st.success("Cache cleared. Please reload to log in again.")
+    st.stop()
 
-# Get time range selection
+# Check for cached token
+token_info = auth_manager.get_cached_token()
+if not token_info:
+    auth_url = auth_manager.get_authorize_url()
+    st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
+    st.info("After logging in, return to this app to continue.")
+    st.stop()
+
+# Proceed with authenticated client
+sp = spotipy.Spotify(auth_manager=auth_manager)
+
+# Debug info in sidebar
+with st.sidebar.expander("🔧 Debug Info"):
+    st.write("Token Cached:", token_info is not None)
+    if token_info:
+        st.json(token_info)
+
+# Time range selection
 time_range = st.sidebar.radio(
     "Time Range",
     options=["short_term", "medium_term", "long_term"],
@@ -61,8 +66,8 @@ time_range = st.sidebar.radio(
 with st.spinner("Loading top tracks..."):
     try:
         top_tracks = sp.current_user_top_tracks(limit=20, time_range=time_range)
-    except spotipy.exceptions.SpotifyException as e:
-        st.error("Authentication failed. Please try logging in again.")
+    except spotipy.exceptions.SpotifyException:
+        st.error("Spotify authentication failed. Please try signing in again.")
         st.stop()
 
 # Title
@@ -75,7 +80,7 @@ if not top_tracks or not top_tracks.get("items"):
 
 # Parse top tracks
 track_data = []
-for idx, item in enumerate(top_tracks["items"]):
+for item in top_tracks["items"]:
     features = sp.audio_features([item["id"]])[0]
     track_data.append({
         "Track Name": item["name"],
@@ -127,6 +132,6 @@ fig.add_scatter(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# Display data table
+# Display raw data
 with st.expander("📋 View Raw Data"):
     st.dataframe(df.drop(columns=["Track ID"]))
