@@ -25,6 +25,16 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
     cache_path=".cache"
 ))
 
+# Allow user to sign out and re-authenticate
+if st.sidebar.button("🔄 Sign Out and Re-authenticate"):
+    import os
+    try:
+        os.remove(".cache")
+    except FileNotFoundError:
+        pass
+    st.success("Cache cleared. Please reload to log in again.")
+    st.experimental_rerun()
+
 # Get time range selection
 time_range = st.sidebar.radio(
     "Time Range",
