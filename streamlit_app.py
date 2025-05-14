@@ -27,7 +27,7 @@ with st.sidebar:
             if f.startswith(".cache"):
                 os.remove(f)
         st.success("Cache cleared. Reloading...")
-        st.rerun()
+        st.experimental_rerun()
 
 # --- Token check ---
 token_info = auth_manager.get_cached_token()
@@ -40,6 +40,22 @@ if not token_info:
 # --- Spotify client ---
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
+# --- Caching functions ---
+@st.cache_data(show_spinner=False)
+def get_audio_features_cached(track_ids):
+    try:
+        return sp.audio_features(track_ids)
+    except Exception:
+        return [None] * len(track_ids)
+
+@st.cache_data(show_spinner=False)
+def get_playlist_items_cached(playlist_id):
+    try:
+        results = sp.playlist_items(playlist_id, market="from_token", additional_types=["track"])
+        return results["items"]
+    except Exception:
+        return None
+
 # --- App Title ---
 st.title("🎧 Spotify Audio Feature Explorer")
 
@@ -47,6 +63,14 @@ st.title("🎧 Spotify Audio Feature Explorer")
 mode = st.radio("Choose Mode:", ["Your Top Tracks", "Explore a Playlist"])
 
 track_data = []
+
+# --- Helper: Extract playlist ID ---
+def extract_playlist_id(input_str):
+    if not input_str:
+        return None
+    # Accept either full URL or just ID
+    match = re.search(r"(playlist\/|spotify:playlist:)?([a-zA-Z0-9]+)", input_str)
+    return match.group(2) if match else None
 
 # --- Mode: Top Tracks ---
 if mode == "Your Top Tracks":
@@ -65,13 +89,18 @@ if mode == "Your Top Tracks":
         except spotipy.exceptions.SpotifyException:
             st.error("Authentication failed. Please sign out and try again.")
             st.stop()
+        except Exception as e:
+            st.error(f"Spotify API error: {e}")
+            st.stop()
 
     if not top_tracks or not top_tracks.get("items"):
         st.warning("No top tracks found. Try listening to more music first!")
         st.stop()
 
-    for item in top_tracks["items"]:
-        features = sp.audio_features([item["id"]])[0]
+    track_ids = [item["id"] for item in top_tracks["items"]]
+    features_list = get_audio_features_cached(track_ids)
+
+    for item, features in zip(top_tracks["items"], features_list):
         if features:
             track_data.append({
                 "Track Name": item["name"],
@@ -81,41 +110,40 @@ if mode == "Your Top Tracks":
                 "Valence": features["valence"],
                 "Tempo": features["tempo"],
                 "Popularity": item["popularity"],
+                "Speechiness": features["speechiness"],
+                "Acousticness": features["acousticness"],
+                "Instrumentalness": features["instrumentalness"],
+                "Liveness": features["liveness"],
                 "Track ID": item["id"]
             })
 
 # --- Mode: Playlist Explorer ---
 else:
-    playlist_url = st.text_input("Paste a public Spotify playlist ID - the numbers and letters after 'playlist/' in the playlist link:")
-    
-    def extract_playlist_id(url):
-        match = re.search(r"(playlist\/|spotify:playlist:)([a-zA-Z0-9]+)", url)
-        return match.group(2) if match else None
-
-    playlist_id = extract_playlist_id(playlist_url)
+    playlist_input = st.text_input("Paste Spotify playlist URL or ID:")
+    playlist_id = extract_playlist_id(playlist_input)
 
     if playlist_id:
         with st.spinner("Loading playlist..."):
-            try:
-                results = sp.playlist_items(
-                    playlist_id,
-                    market="from_token",
-                    additional_types=["track"]
-                )
-                playlist_tracks = results["items"]
-            except spotipy.exceptions.SpotifyException:
-                st.error("Could not fetch playlist. Make sure it's public.")
+            playlist_tracks = get_playlist_items_cached(playlist_id)
+            if playlist_tracks is None:
+                st.error("Could not fetch playlist. Make sure it's public and the ID is correct.")
                 st.stop()
 
         if not playlist_tracks:
             st.warning("No tracks found in the playlist.")
             st.stop()
 
+        track_ids = []
+        tracks_info = []
         for item in playlist_tracks:
-            track = item["track"]
-            if not track or not track.get("id"):
-                continue
-            features = sp.audio_features([track["id"]])[0]
+            track = item.get("track")
+            if track and track.get("id"):
+                track_ids.append(track["id"])
+                tracks_info.append(track)
+
+        features_list = get_audio_features_cached(track_ids)
+
+        for track, features in zip(tracks_info, features_list):
             if features:
                 track_data.append({
                     "Track Name": track["name"],
@@ -125,6 +153,10 @@ else:
                     "Valence": features["valence"],
                     "Tempo": features["tempo"],
                     "Popularity": track["popularity"],
+                    "Speechiness": features["speechiness"],
+                    "Acousticness": features["acousticness"],
+                    "Instrumentalness": features["instrumentalness"],
+                    "Liveness": features["liveness"],
                     "Track ID": track["id"]
                 })
 
@@ -136,13 +168,15 @@ if not track_data:
 df = pd.DataFrame(track_data)
 
 # --- Track selection ---
-selected_track_name = st.selectbox("🎵 Select a track to highlight", df["Track Name"])
-selected_track_id = df[df["Track Name"] == selected_track_name]["Track ID"].values[0]
+track_options = df.apply(lambda r: f"{r['Track Name']} — {r['Artist']}", axis=1)
+selected_option = st.selectbox("🎵 Select a track to highlight", track_options)
+selected_track_id = df.loc[track_options == selected_option, "Track ID"].values[0]
 
 # --- Feature scatterplot ---
 st.subheader("🔍 Audio Feature Scatterplot")
-x_feature = st.selectbox("X-axis", ["Danceability", "Energy", "Valence", "Tempo", "Popularity"], index=0)
-y_feature = st.selectbox("Y-axis", ["Energy", "Valence", "Danceability", "Tempo", "Popularity"], index=1)
+feature_options = ["Danceability", "Energy", "Valence", "Tempo", "Popularity", "Speechiness", "Acousticness", "Instrumentalness", "Liveness"]
+x_feature = st.selectbox("X-axis", feature_options, index=0)
+y_feature = st.selectbox("Y-axis", [f for f in feature_options if f != x_feature], index=1)
 
 fig = px.scatter(
     df,
@@ -156,7 +190,7 @@ fig = px.scatter(
 )
 
 # Highlight selected track
-selected_row = df[df["Track Name"] == selected_track_name].iloc[0]
+selected_row = df[df["Track ID"] == selected_track_id].iloc[0]
 fig.add_scatter(
     x=[selected_row[x_feature]],
     y=[selected_row[y_feature]],
