@@ -90,7 +90,11 @@ else:
     
     def extract_playlist_id(url):
         match = re.search(r"(playlist\/|spotify:playlist:)([a-zA-Z0-9]+)", url)
-        return match.group(2) if match else None
+        if match:
+            return match.group(2)
+        elif re.match(r"^[a-zA-Z0-9]+$", url):  # fallback for raw ID
+            return url
+        return None
 
     playlist_id = extract_playlist_id(playlist_url)
 
