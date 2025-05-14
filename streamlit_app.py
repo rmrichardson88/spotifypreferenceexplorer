@@ -1,7 +1,10 @@
 import os
+import pandas as pd
+import plotly.express as px
 import streamlit as st
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
+from packaging import version
 
 # --- Page config ---
 st.set_page_config(page_title="Spotify Explorer", page_icon="🎧")
@@ -12,7 +15,7 @@ auth_manager = SpotifyOAuth(
     client_secret=st.secrets["SPOTIPY_CLIENT_SECRET"],
     redirect_uri=st.secrets["SPOTIPY_REDIRECT_URI"],
     scope="user-top-read",
-    cache_path=".cache"  # explicitly define cache file
+    cache_path=".cache"
 )
 
 # --- Sidebar logout ---
@@ -23,30 +26,28 @@ with st.sidebar:
             os.remove(".cache")
         except FileNotFoundError:
             pass
-        st.success("Cache cleared. Reloading...")
-        st.rerun()
+        st.success("Cache cleared. Please reload the page to log in again.")
+        st.stop()
 
-# --- Authentication Check ---
+# --- Authentication ---
 try:
     token_info = auth_manager.get_access_token(as_dict=True)
-except:
-    token_info = None
-
-# --- If not authenticated, prompt login and stop ---
-if not token_info:
+    if not token_info:
+        raise Exception("No token")
+except Exception:
     auth_url = auth_manager.get_authorize_url()
     st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
     st.info("After logging in, return to this page to continue.")
     st.stop()
 
-# --- If authenticated, initialize Spotify client ---
+# --- Initialize Spotify client ---
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
-# --- Main App UI ---
+# --- App content ---
 st.title("🎧 Spotify Audio Feature Explorer")
-st.markdown("Explore your top tracks from Spotify.")
+st.markdown("Explore your top tracks and their audio features.")
 
-# Time range selector
+# --- Time range selector ---
 time_range = st.sidebar.radio(
     "Time Range",
     options=["short_term", "medium_term", "long_term"],
@@ -57,7 +58,7 @@ time_range = st.sidebar.radio(
     }[x]
 )
 
-# Get top tracks
+# --- Fetch top tracks ---
 with st.spinner("Loading top tracks..."):
     try:
         top_tracks = sp.current_user_top_tracks(limit=20, time_range=time_range)
@@ -65,17 +66,14 @@ with st.spinner("Loading top tracks..."):
         st.error("Authentication failed. Please try signing out and logging in again.")
         st.stop()
 
-# Title
-st.title("🎧 Spotify Preference Explorer")
-
-# Handle case with no top tracks
+# --- Handle empty results ---
 if not top_tracks or not top_tracks.get("items"):
     st.warning("No top tracks found. Try listening to some music first!")
     st.stop()
 
-# Parse top track data
+# --- Build DataFrame ---
 track_data = []
-for idx, item in enumerate(top_tracks["items"]):
+for item in top_tracks["items"]:
     features = sp.audio_features([item["id"]])[0]
     track_data.append({
         "Track Name": item["name"],
@@ -90,13 +88,19 @@ for idx, item in enumerate(top_tracks["items"]):
 
 df = pd.DataFrame(track_data)
 
-# Track selection
+# --- Track selector ---
 selected_track_name = st.selectbox("🎵 Select a track to highlight", df["Track Name"])
 selected_track_id = df[df["Track Name"] == selected_track_name]["Track ID"].values[0]
-st.query_params.update({"track_id": selected_track_id})
 
-# Feature scatterplot
+# --- Set query param (modern & fallback support) ---
+if version.parse(st.__version__) >= version.parse("1.32.0"):
+    st.query_params["track_id"] = [selected_track_id]
+else:
+    st.experimental_set_query_params(track_id=selected_track_id)
+
+# --- Scatterplot for features ---
 st.subheader("🔍 Audio Feature Scatterplot")
+
 x_feature = st.selectbox("X-axis", ["Danceability", "Energy", "Valence", "Tempo", "Popularity"], index=0)
 y_feature = st.selectbox("Y-axis", ["Energy", "Valence", "Danceability", "Tempo", "Popularity"], index=1)
 
@@ -111,7 +115,7 @@ fig = px.scatter(
     template="plotly_dark"
 )
 
-# Highlight selected track
+# --- Highlight selected track ---
 selected_row = df[df["Track Name"] == selected_track_name].iloc[0]
 fig.add_scatter(
     x=[selected_row[x_feature]],
@@ -125,6 +129,6 @@ fig.add_scatter(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# Raw data table
+# --- Show raw data ---
 with st.expander("📋 View Raw Data"):
     st.dataframe(df.drop(columns=["Track ID"]))
