@@ -41,7 +41,7 @@ if not token_info:
     if "code" in query_params:
         code = query_params["code"][0]
         token_info = auth_manager.get_access_token(code, as_dict=False)
-        st.experimental_rerun()
+        st.rerun()
     else:
         auth_url = auth_manager.get_authorize_url()
         st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
