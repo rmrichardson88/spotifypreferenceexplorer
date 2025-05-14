@@ -97,7 +97,11 @@ else:
     if playlist_id:
         with st.spinner("Loading playlist..."):
             try:
-                results = sp.playlist_items(playlist_id, additional_types=["track"])
+                results = sp.playlist_items(
+                    playlist_id,
+                    market="from_token",
+                    additional_types=["track"]
+                )
                 playlist_tracks = results["items"]
             except spotipy.exceptions.SpotifyException:
                 st.error("Could not fetch playlist. Make sure it's public.")
