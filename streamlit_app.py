@@ -8,29 +8,34 @@ import plotly.express as px
 # --- Page config ---
 st.set_page_config(page_title="Spotify Explorer", page_icon="🎧")
 
+# --- Debug: Show cache path ---
+st.sidebar.markdown(f"**Cache Path:** `{os.path.abspath('.cache')}`")
+
 # --- Spotify OAuth setup ---
 auth_manager = SpotifyOAuth(
     client_id=st.secrets["SPOTIPY_CLIENT_ID"],
     client_secret=st.secrets["SPOTIPY_CLIENT_SECRET"],
-    redirect_uri=st.secrets["SPOTIPY_REDIRECT_URI"],
+    redirect_uri=st.secrets["SPOTIPY_REDIRECT_URI"],  # Must exactly match Spotify dashboard
     scope="user-top-read",
-    cache_path=".cache"  # Explicitly define cache file
+    cache_path=".cache",
+    show_dialog=True  # Force Spotify to re-prompt for login
 )
 
-# --- Sidebar logout ---
+# --- Sidebar: Logout ---
 with st.sidebar:
     st.title("Settings")
     if st.button("🔁 Sign Out and Reauthenticate"):
-        try:
-            os.remove(".cache")
-        except FileNotFoundError:
-            pass
+        # Remove all .cache* files
+        for f in os.listdir():
+            if f.startswith(".cache"):
+                os.remove(f)
         st.success("Cache cleared. Reloading...")
         st.rerun()
 
 # --- Authentication Check ---
-# Try to get the cached token
 token_info = auth_manager.get_cached_token()
+st.sidebar.markdown("### Token Info")
+st.sidebar.json(token_info)  # Debug display, optional
 
 # If no token is cached, prompt for login
 if not token_info:
@@ -65,9 +70,6 @@ with st.spinner("Loading top tracks..."):
         st.error("Authentication failed. Please try signing out and logging in again.")
         st.stop()
 
-# Title
-st.title("🎧 Spotify Preference Explorer")
-
 # Handle case with no top tracks
 if not top_tracks or not top_tracks.get("items"):
     st.warning("No top tracks found. Try listening to some music first!")
@@ -88,7 +90,7 @@ for idx, item in enumerate(top_tracks["items"]):
         "Track ID": item["id"]
     })
 
-# Convert to DataFrame for easier handling
+# Convert to DataFrame
 df = pd.DataFrame(track_data)
 
 # Track selection
@@ -112,7 +114,7 @@ fig = px.scatter(
     template="plotly_dark"
 )
 
-# Highlight selected track on scatterplot
+# Highlight selected track
 selected_row = df[df["Track Name"] == selected_track_name].iloc[0]
 fig.add_scatter(
     x=[selected_row[x_feature]],
@@ -124,9 +126,9 @@ fig.add_scatter(
     name="Selected Track"
 )
 
-# Display scatterplot
+# Show scatterplot
 st.plotly_chart(fig, use_container_width=True)
 
-# Raw data table
+# Optional: raw data table
 with st.expander("📋 View Raw Data"):
     st.dataframe(df.drop(columns=["Track ID"]))
