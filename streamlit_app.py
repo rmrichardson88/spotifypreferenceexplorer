@@ -1,48 +1,50 @@
+import os
 import streamlit as st
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-import pandas as pd
-import plotly.express as px
-import os
 
-# Set Streamlit page config
-st.set_page_config(page_title="Spotify Preference Explorer", layout="wide")
+# --- Page config ---
+st.set_page_config(page_title="Spotify Explorer", page_icon="🎧")
 
-# Sidebar authentication setup
-st.sidebar.title("Spotify Authentication")
-client_id = st.secrets["SPOTIPY_CLIENT_ID"]
-client_secret = st.secrets["SPOTIPY_CLIENT_SECRET"]
-redirect_uri = st.secrets["SPOTIPY_REDIRECT_URI"]
-
-scope = "user-top-read"
+# --- Spotify OAuth setup ---
 auth_manager = SpotifyOAuth(
-    client_id=client_id,
-    client_secret=client_secret,
-    redirect_uri=redirect_uri,
-    scope=scope,
-    show_dialog=True,
-    cache_path=".cache"
+    client_id=st.secrets["SPOTIPY_CLIENT_ID"],
+    client_secret=st.secrets["SPOTIPY_CLIENT_SECRET"],
+    redirect_uri=st.secrets["SPOTIPY_REDIRECT_URI"],
+    scope="user-top-read",
+    cache_path=".cache"  # explicitly define cache file
 )
 
-if st.sidebar.button("Sign Out and Reauthenticate"):
-    try:
-        os.remove(".cache")
-    except FileNotFoundError:
-        pass
-    st.success("Cache cleared. Please reload to log in again.")
-    st.rerun()
+# --- Sidebar logout ---
+with st.sidebar:
+    st.title("Settings")
+    if st.button("🔁 Sign Out and Reauthenticate"):
+        try:
+            os.remove(".cache")
+        except FileNotFoundError:
+            pass
+        st.success("Cache cleared. Reloading...")
+        st.rerun()
 
-# Get token
-token_info = auth_manager.get_access_token(as_dict=True)
+# --- Authentication Check ---
+try:
+    token_info = auth_manager.get_access_token(as_dict=True)
+except:
+    token_info = None
 
+# --- If not authenticated, prompt login and stop ---
 if not token_info:
     auth_url = auth_manager.get_authorize_url()
     st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
-    st.info("After logging in, return to this app URL to continue.")
+    st.info("After logging in, return to this page to continue.")
     st.stop()
 
-# Create Spotify API client
+# --- If authenticated, initialize Spotify client ---
 sp = spotipy.Spotify(auth_manager=auth_manager)
+
+# --- Main App UI ---
+st.title("🎧 Spotify Audio Feature Explorer")
+st.markdown("Explore your top tracks from Spotify.")
 
 # Time range selector
 time_range = st.sidebar.radio(
