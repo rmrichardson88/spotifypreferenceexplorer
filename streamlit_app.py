@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.express as px
 import os
 
-# Set page config
+# Set Streamlit page config
 st.set_page_config(page_title="Spotify Preference Explorer", layout="wide")
 
 # Sidebar authentication setup
@@ -14,7 +14,6 @@ client_id = st.secrets["SPOTIPY_CLIENT_ID"]
 client_secret = st.secrets["SPOTIPY_CLIENT_SECRET"]
 redirect_uri = st.secrets["SPOTIPY_REDIRECT_URI"]
 
-# Authenticate with Spotify
 scope = "user-top-read"
 auth_manager = SpotifyOAuth(
     client_id=client_id,
@@ -25,33 +24,34 @@ auth_manager = SpotifyOAuth(
     cache_path=".cache"
 )
 
-# Sign-out button
-if st.sidebar.button("🔒 Sign Out"):
+# Sign out option
+if st.sidebar.button("Sign Out and Reauthenticate"):
     try:
         os.remove(".cache")
     except FileNotFoundError:
         pass
-    st.success("Cache cleared. Please reload to log in again.")
+    st.success("Cache cleared. Please reload to log in again.\n\nIf you're not prompted to log in again, try clearing your browser's Spotify cookies or using a private/incognito window.")
     st.stop()
 
-# Check for cached token
+# Check query parameters for auth code
+query_params = st.experimental_get_query_params()
 token_info = auth_manager.get_cached_token()
-if not token_info:
-    auth_url = auth_manager.get_authorize_url()
-    st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
-    st.info("After logging in, return to this app to continue.")
-    st.stop()
 
-# Proceed with authenticated client
+if not token_info:
+    if "code" in query_params:
+        code = query_params["code"][0]
+        token_info = auth_manager.get_access_token(code, as_dict=False)
+        st.experimental_rerun()
+    else:
+        auth_url = auth_manager.get_authorize_url()
+        st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
+        st.info("After logging in, return to this app URL to continue.")
+        st.stop()
+
+# Create Spotify API client
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
-# Debug info in sidebar
-with st.sidebar.expander("🔧 Debug Info"):
-    st.write("Token Cached:", token_info is not None)
-    if token_info:
-        st.json(token_info)
-
-# Time range selection
+# Time range selector
 time_range = st.sidebar.radio(
     "Time Range",
     options=["short_term", "medium_term", "long_term"],
@@ -67,20 +67,20 @@ with st.spinner("Loading top tracks..."):
     try:
         top_tracks = sp.current_user_top_tracks(limit=20, time_range=time_range)
     except spotipy.exceptions.SpotifyException:
-        st.error("Spotify authentication failed. Please try signing in again.")
+        st.error("Authentication failed. Please try signing out and logging in again.")
         st.stop()
 
 # Title
 st.title("🎧 Spotify Preference Explorer")
 
-# If no top tracks
+# Handle case with no top tracks
 if not top_tracks or not top_tracks.get("items"):
     st.warning("No top tracks found. Try listening to some music first!")
     st.stop()
 
-# Parse top tracks
+# Parse top track data
 track_data = []
-for item in top_tracks["items"]:
+for idx, item in enumerate(top_tracks["items"]):
     features = sp.audio_features([item["id"]])[0]
     track_data.append({
         "Track Name": item["name"],
@@ -97,12 +97,10 @@ df = pd.DataFrame(track_data)
 
 # Track selection
 selected_track_name = st.selectbox("🎵 Select a track to highlight", df["Track Name"])
-
-# Get corresponding ID and update query params
 selected_track_id = df[df["Track Name"] == selected_track_name]["Track ID"].values[0]
 st.query_params.update({"track_id": selected_track_id})
 
-# 2D Feature Scatterplot
+# Feature scatterplot
 st.subheader("🔍 Audio Feature Scatterplot")
 x_feature = st.selectbox("X-axis", ["Danceability", "Energy", "Valence", "Tempo", "Popularity"], index=0)
 y_feature = st.selectbox("Y-axis", ["Energy", "Valence", "Danceability", "Tempo", "Popularity"], index=1)
@@ -132,6 +130,6 @@ fig.add_scatter(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# Display raw data
+# Raw data table
 with st.expander("📋 View Raw Data"):
     st.dataframe(df.drop(columns=["Track ID"]))
