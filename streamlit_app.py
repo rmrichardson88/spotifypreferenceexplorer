@@ -129,4 +129,4 @@ st.plotly_chart(fig, use_container_width=True)
 
 # Raw data table
 with st.expander("📋 View Raw Data"):
-    st.dataframe(df.drop(columns=["Track ID"]))
+    st.dataframe(df.drop(columns=["Track ID"])
