@@ -86,7 +86,7 @@ if mode == "Your Top Tracks":
 
 # --- Mode: Playlist Explorer ---
 else:
-    playlist_url = st.text_input("Paste a public Spotify ID (the numbers and letters after "playlist/" in the link:")
+    playlist_url = st.text_input("Paste a public Spotify playlist ID - the numbers and letters after 'playlist/' in the playlist link:")
     
     def extract_playlist_id(url):
         match = re.search(r"(playlist\/|spotify:playlist:)([a-zA-Z0-9]+)", url)
