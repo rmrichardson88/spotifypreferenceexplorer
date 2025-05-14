@@ -18,16 +18,25 @@ auth_manager = SpotifyOAuth(
     show_dialog=True
 )
 
-# --- Token management ---
+# --- Handle Spotify login redirect ---
+query_params = st.experimental_get_query_params()
+code = query_params.get("code", [None])[0]
+
 if "token_info" not in st.session_state:
-    try:
+    token_info = None
+    if code:
+        try:
+            token_info = auth_manager.get_access_token(code=code, as_dict=True)
+        except Exception as e:
+            st.error(f"Error exchanging code for token: {e}")
+    elif auth_manager.get_cached_token():
         token_info = auth_manager.get_cached_token()
-        if not token_info or auth_manager.is_token_expired(token_info):
-            token_info = auth_manager.get_access_token(as_dict=True)
+
+    if token_info:
         st.session_state.token_info = token_info
-    except Exception as e:
+    else:
         st.session_state.token_info = None
-        st.error(f"Error retrieving Spotify token: {e}")
+
 
 # --- Check authentication ---
 if not st.session_state.token_info:
