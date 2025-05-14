@@ -24,29 +24,22 @@ auth_manager = SpotifyOAuth(
     cache_path=".cache"
 )
 
-# Sign out option
 if st.sidebar.button("Sign Out and Reauthenticate"):
     try:
         os.remove(".cache")
     except FileNotFoundError:
         pass
-    st.success("Cache cleared. Please reload to log in again.\n\nIf you're not prompted to log in again, try clearing your browser's Spotify cookies or using a private/incognito window.")
-    st.stop()
+    st.success("Cache cleared. Please reload to log in again.")
+    st.rerun()
 
-# Check query parameters for auth code
-query_params = st.experimental_get_query_params()
-token_info = auth_manager.get_cached_token()
+# Get token
+token_info = auth_manager.get_access_token(as_dict=True)
 
 if not token_info:
-    if "code" in query_params:
-        code = query_params["code"][0]
-        token_info = auth_manager.get_access_token(code, as_dict=False)
-        st.rerun()
-    else:
-        auth_url = auth_manager.get_authorize_url()
-        st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
-        st.info("After logging in, return to this app URL to continue.")
-        st.stop()
+    auth_url = auth_manager.get_authorize_url()
+    st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
+    st.info("After logging in, return to this app URL to continue.")
+    st.stop()
 
 # Create Spotify API client
 sp = spotipy.Spotify(auth_manager=auth_manager)
