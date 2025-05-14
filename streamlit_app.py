@@ -1,4 +1,5 @@
 import os
+import re
 import streamlit as st
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
@@ -18,95 +19,115 @@ auth_manager = SpotifyOAuth(
     show_dialog=True
 )
 
-# --- Handle Spotify login redirect ---
-query_params = st.experimental_get_query_params()
-code = query_params.get("code", [None])[0]
-
-if "token_info" not in st.session_state:
-    token_info = None
-    if code:
-        try:
-            token_info = auth_manager.get_access_token(code=code, as_dict=True)
-        except Exception as e:
-            st.error(f"Error exchanging code for token: {e}")
-    elif auth_manager.get_cached_token():
-        token_info = auth_manager.get_cached_token()
-
-    if token_info:
-        st.session_state.token_info = token_info
-    else:
-        st.session_state.token_info = None
-
-
-# --- Check authentication ---
-if not st.session_state.token_info:
-    auth_url = auth_manager.get_authorize_url()
-    st.markdown("## 🔐 Please log in to Spotify")
-    st.markdown(f"[Click here to log in to Spotify]({auth_url})")
-    st.info("After logging in, return to this page.")
-    st.stop()
-
-# --- Initialize Spotify client ---
-sp = spotipy.Spotify(auth_manager=auth_manager)
-
-# --- Sidebar: Settings ---
+# --- Sidebar: Settings and logout ---
 with st.sidebar:
     st.title("Settings")
     if st.button("🔁 Sign Out and Reauthenticate"):
-        # Clear cache files
         for f in os.listdir():
             if f.startswith(".cache"):
                 os.remove(f)
-        # Reset session state
-        st.session_state.clear()
-        st.success("Signed out. Please log in again.")
+        st.success("Cache cleared. Reloading...")
         st.rerun()
 
-    # Debug token info
-    with st.expander("🔍 Token Info (debug)"):
-        st.json(st.session_state.token_info)
-
-# --- Main App UI ---
-st.title("🎧 Spotify Audio Feature Explorer")
-st.markdown("Explore your top tracks and their audio features.")
-
-# --- Time range selection ---
-time_range = st.sidebar.radio(
-    "Time Range",
-    options=["short_term", "medium_term", "long_term"],
-    format_func=lambda x: {
-        "short_term": "Last 4 Weeks",
-        "medium_term": "Last 6 Months",
-        "long_term": "All Time"
-    }[x]
-)
-
-# --- Fetch top tracks ---
-with st.spinner("Loading your top tracks..."):
-    try:
-        top_tracks = sp.current_user_top_tracks(limit=20, time_range=time_range)
-    except spotipy.exceptions.SpotifyException:
-        st.error("Authentication failed. Please try signing out and logging in again.")
-        st.stop()
-
-if not top_tracks or not top_tracks.get("items"):
-    st.warning("No top tracks found. Try listening to some music first!")
+# --- Token check ---
+token_info = auth_manager.get_cached_token()
+if not token_info:
+    auth_url = auth_manager.get_authorize_url()
+    st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
+    st.info("After logging in, return to this page to continue.")
     st.stop()
 
-# --- Process track data ---
+# --- Spotify client ---
+sp = spotipy.Spotify(auth_manager=auth_manager)
+
+# --- App Title ---
+st.title("🎧 Spotify Audio Feature Explorer")
+
+# --- Mode Selection ---
+mode = st.radio("Choose Mode:", ["Your Top Tracks", "Explore a Playlist"])
+
 track_data = []
-for item in top_tracks["items"]:
-    features = sp.audio_features([item["id"]])[0]
-    track_data.append({
-        "Track Name": item["name"],
-        "Artist": item["artists"][0]["name"],
-        "Danceability": features["danceability"],
-        "Energy": features["energy"],
-        "Valence": features["valence"],
-        "Tempo": features["tempo"],
-        "Popularity": item["popularity"],
-        "Track ID": item["id"]
-    })
+
+# --- Mode: Top Tracks ---
+if mode == "Your Top Tracks":
+    time_range = st.sidebar.radio(
+        "Time Range",
+        options=["short_term", "medium_term", "long_term"],
+        format_func=lambda x: {
+            "short_term": "Last 4 Weeks",
+            "medium_term": "Last 6 Months",
+            "long_term": "All Time"
+        }[x]
+    )
+    with st.spinner("Loading your top tracks..."):
+        try:
+            top_tracks = sp.current_user_top_tracks(limit=20, time_range=time_range)
+        except spotipy.exceptions.SpotifyException:
+            st.error("Authentication failed. Please sign out and try again.")
+            st.stop()
+
+    if not top_tracks or not top_tracks.get("items"):
+        st.warning("No top tracks found. Try listening to more music first!")
+        st.stop()
+
+    for item in top_tracks["items"]:
+        features = sp.audio_features([item["id"]])[0]
+        if features:
+            track_data.append({
+                "Track Name": item["name"],
+                "Artist": item["artists"][0]["name"],
+                "Danceability": features["danceability"],
+                "Energy": features["energy"],
+                "Valence": features["valence"],
+                "Tempo": features["tempo"],
+                "Popularity": item["popularity"],
+                "Track ID": item["id"]
+            })
+
+# --- Mode: Playlist Explorer ---
+else:
+    playlist_url = st.text_input("Paste a public Spotify playlist link or URI:")
+    
+    def extract_playlist_id(url):
+        match = re.search(r"(playlist\/|spotify:playlist:)([a-zA-Z0-9]+)", url)
+        return match.group(2) if match else None
+
+    playlist_id = extract_playlist_id(playlist_url)
+
+    if playlist_id:
+        with st.spinner("Loading playlist..."):
+            try:
+                results = sp.playlist_items(playlist_id, additional_types=["track"])
+                playlist_tracks = results["items"]
+            except spotipy.exceptions.SpotifyException:
+                st.error("Could not fetch playlist. Make sure it's public.")
+                st.stop()
+
+        if not playlist_tracks:
+            st.warning("No tracks found in the playlist.")
+            st.stop()
+
+        for item in playlist_tracks:
+            track = item["track"]
+            if not track or not track.get("id"):
+                continue
+            features = sp.audio_features([track["id"]])[0]
+            if features:
+                track_data.append({
+                    "Track Name": track["name"],
+                    "Artist": track["artists"][0]["name"],
+                    "Danceability": features["danceability"],
+                    "Energy": features["energy"],
+                    "Valence": features["valence"],
+                    "Tempo": features["tempo"],
+                    "Popularity": track["popularity"],
+                    "Track ID": track["id"]
+                })
+
+# --- Data Handling ---
+if not track_data:
+    st.warning("No audio features available to display.")
+    st.stop()
 
 df = pd.DataFrame(track_data)
 
@@ -130,7 +151,7 @@ fig = px.scatter(
     template="plotly_dark"
 )
 
-# --- Highlight selected track ---
+# Highlight selected track
 selected_row = df[df["Track Name"] == selected_track_name].iloc[0]
 fig.add_scatter(
     x=[selected_row[x_feature]],
@@ -144,6 +165,6 @@ fig.add_scatter(
 
 st.plotly_chart(fig, use_container_width=True)
 
-# --- Optional: raw data ---
+# --- Raw data expander ---
 with st.expander("📋 View Raw Data"):
     st.dataframe(df.drop(columns=["Track ID"]))
