@@ -16,7 +16,7 @@ auth_manager = SpotifyOAuth(
     redirect_uri=st.secrets["SPOTIPY_REDIRECT_URI"],
     scope="user-top-read",
     cache_path=".cache",
-    show_dialog=True
+    show_dialog=False
 )
 
 # --- Sidebar: Settings and logout ---
