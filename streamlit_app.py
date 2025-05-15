@@ -105,9 +105,11 @@ if mode == "Your Top Tracks":
 else:
     playlist_input = st.text_input("Paste Spotify Playlist ID or URL:")
 
-    def extract_playlist_id(url):
-        match = re.search(r"(playlist\/|spotify:playlist:)?([a-zA-Z0-9]+)", url)
-        return match.group(2) if match else None
+    def extract_playlist_id(text):
+        # Match either a full URL or a raw ID
+        match = re.search(r"(?:playlist\/|spotify:playlist:)?([a-zA-Z0-9]{22})", text)
+        return match.group(1) if match else None
+
 
     playlist_id = extract_playlist_id(playlist_input)
 
@@ -120,9 +122,11 @@ else:
                     additional_types=["track"]
                 )
                 playlist_tracks = results["items"]
-            except spotipy.exceptions.SpotifyException:
-                st.error("Could not fetch playlist. Make sure it's public.")
+            except spotipy.exceptions.SpotifyException as e:
+                st.error("Could not fetch playlist. Make sure it's public, available in your region, and that the ID is valid.")
+                st.text(f"Spotify API error: {e}")  # Optional: Show full error for debugging
                 st.stop()
+
 
         if not playlist_tracks:
             st.warning("No tracks found in the playlist.")
