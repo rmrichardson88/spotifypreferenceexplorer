@@ -1,4 +1,3 @@
-import os
 import re
 import streamlit as st
 import spotipy
@@ -15,7 +14,6 @@ auth_manager = SpotifyOAuth(
     client_secret=st.secrets["SPOTIPY_CLIENT_SECRET"],
     redirect_uri=st.secrets["SPOTIPY_REDIRECT_URI"],
     scope="user-top-read",
-    cache_path=".cache",
     show_dialog=False
 )
 
@@ -23,25 +21,35 @@ auth_manager = SpotifyOAuth(
 with st.sidebar:
     st.title("Settings")
     if st.button("🔁 Sign Out and Reauthenticate"):
-        for f in os.listdir():
-            if f.startswith(".cache"):
-                os.remove(f)
-        st.success("Cache cleared. Reloading...")
+        st.session_state.clear()
+        st.success("Session cleared. Reloading...")
         st.rerun()
 
-# --- Token check ---
-token_info = auth_manager.get_cached_token()
-if not token_info:
-    auth_url = auth_manager.get_authorize_url()
-    st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
-    st.info("After logging in, return to this page to continue.")
-    st.stop()
+# --- Token management ---
+if "token_info" not in st.session_state:
+    token_info = auth_manager.get_cached_token()
+    if not token_info:
+        auth_url = auth_manager.get_authorize_url()
+        st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
+        st.info("After logging in, return to this page.")
+        st.stop()
+    st.session_state.token_info = token_info
+else:
+    token_info = st.session_state.token_info
 
 # --- Spotify client ---
-sp = spotipy.Spotify(auth_manager=auth_manager)
+sp = spotipy.Spotify(auth=token_info["access_token"])
 
 # --- App Title ---
 st.title("🎧 Spotify Audio Feature Explorer")
+
+# Optional: confirm login
+try:
+    profile = sp.current_user()
+    st.success(f"Logged in as **{profile['display_name']}**")
+except:
+    st.error("Spotify session expired or failed. Please sign out and log in again.")
+    st.stop()
 
 # --- Mode Selection ---
 mode = st.radio("Choose Mode:", ["Your Top Tracks", "Explore a Playlist"])
@@ -86,17 +94,13 @@ if mode == "Your Top Tracks":
 
 # --- Mode: Playlist Explorer ---
 else:
-    playlist_url = st.text_input("Paste a public Spotify playlist ID - the numbers and letters after 'playlist/' in the playlist link:")
-    
-    def extract_playlist_id(url):
-        match = re.search(r"(playlist\/|spotify:playlist:)([a-zA-Z0-9]+)", url)
-        if match:
-            return match.group(2)
-        elif re.match(r"^[a-zA-Z0-9]+$", url):  # fallback for raw ID
-            return url
-        return None
+    playlist_input = st.text_input("Paste Spotify Playlist ID or URL:")
 
-    playlist_id = extract_playlist_id(playlist_url)
+    def extract_playlist_id(url):
+        match = re.search(r"(playlist\/|spotify:playlist:)?([a-zA-Z0-9]+)", url)
+        return match.group(2) if match else None
+
+    playlist_id = extract_playlist_id(playlist_input)
 
     if playlist_id:
         with st.spinner("Loading playlist..."):
