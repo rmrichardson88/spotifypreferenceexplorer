@@ -27,15 +27,24 @@ with st.sidebar:
 
 # --- Token management ---
 if "token_info" not in st.session_state:
-    token_info = auth_manager.get_cached_token()
-    if not token_info:
+    query_params = st.query_params
+
+    # Handle redirect with "code" in URL
+    if "code" in query_params:
+        code = query_params["code"]
+        token_info = auth_manager.get_access_token(code, as_dict=True)
+        st.session_state.token_info = token_info
+        st.success("Successfully authenticated with Spotify!")
+        st.experimental_rerun()
+
+    else:
         auth_url = auth_manager.get_authorize_url()
         st.markdown(f"## 🔐 [Click here to log in to Spotify]({auth_url})")
         st.info("After logging in, return to this page.")
         st.stop()
-    st.session_state.token_info = token_info
-else:
-    token_info = st.session_state.token_info
+
+# Reuse cached token
+token_info = st.session_state.token_info
 
 # --- Spotify client ---
 sp = spotipy.Spotify(auth=token_info["access_token"])
