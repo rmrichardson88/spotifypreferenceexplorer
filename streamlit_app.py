@@ -35,7 +35,7 @@ if "token_info" not in st.session_state:
         token_info = auth_manager.get_access_token(code, as_dict=True)
         st.session_state.token_info = token_info
         st.success("Successfully authenticated with Spotify!")
-        st.experimental_rerun()
+        st.rerun()
 
     else:
         auth_url = auth_manager.get_authorize_url()
