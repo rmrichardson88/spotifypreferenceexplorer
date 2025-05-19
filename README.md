@@ -1,19 +1,17 @@
-# 🎈 Blank app template
+# 🎧 Music Analyst AI Agent
 
-A simple Streamlit app template for you to modify!
+An AI assistant for music producers to analyze current Spotify trends and suggest what to look for in up-and-coming artists.
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://blank-app-template.streamlit.app/)
+## Features
 
-### How to run it on your own machine
+- Queries **Spotify's "Today's Top Hits"** playlist
+- Uses an **open-source LLM** (e.g., Mistral 7B) via LangChain
+- Summarizes musical trends in **danceability, energy, valence**, etc.
+- Agentic behavior: the AI knows when to query and when to reflect
 
-1. Install the requirements
+## Setup
 
-   ```
-   $ pip install -r requirements.txt
-   ```
-
-2. Run the app
-
-   ```
-   $ streamlit run streamlit_app.py
-   ```
+### 1. Clone the Repo
+```bash
+git clone https://github.com/yourusername/music-analyst-ai.git
+cd music-analyst-ai
