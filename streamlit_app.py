@@ -17,7 +17,7 @@ def get_spotify_client():
         client_id=SPOTIFY_CLIENT_ID,
         client_secret=SPOTIFY_CLIENT_SECRET,
         redirect_uri=REDIRECT_URI,
-        SCOPE=SCOPE,
+        scope=SCOPE,
     )
 
     token_info = st.session_state.get("token_info", None)
