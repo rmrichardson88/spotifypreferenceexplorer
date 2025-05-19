@@ -3,6 +3,9 @@ import requests
 
 def generate_commentary(top_attributes):
     api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise EnvironmentError("Missing GROQ_API_KEY environment variable.")
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
