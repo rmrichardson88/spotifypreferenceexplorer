@@ -1,8 +1,9 @@
 import os
 import requests
+import streamlit as st
 
 def generate_commentary(top_attributes):
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key = st.secrets["GROQ_API_KEY"]
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
