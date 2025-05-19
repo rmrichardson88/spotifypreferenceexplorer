@@ -18,17 +18,23 @@ def get_playlist_audio_features(playlist_url):
     results = sp.playlist_tracks(playlist_id, limit=100)
     tracks = results["items"]
 
+    if not tracks:
+        raise ValueError("The playlist is empty or could not be fetched.")
+
     audio_features = []
     for item in tracks:
         track = item["track"]
         if not track or not track.get("id"):
-            continue
+            continue  # skip unavailable or malformed tracks
 
         af = sp.audio_features(track["id"])[0]
         if af:
             af["name"] = track["name"]
             af["artist"] = track["artists"][0]["name"]
             audio_features.append(af)
+
+    if not audio_features:
+        raise ValueError("No valid audio features found in this playlist.")
 
     df = pd.DataFrame(audio_features)
     feature_cols = ["danceability", "energy", "valence", "tempo", "acousticness", "instrumentalness"]
