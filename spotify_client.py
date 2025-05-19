@@ -13,14 +13,17 @@ def get_playlist_audio_features(playlist_url):
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIFY_CLIENT_SECRET")
     ))
-    
+
     playlist_id = extract_playlist_id(playlist_url)
-    results = sp.playlist_tracks(playlist_id, limit=100, market="US")
+    results = sp.playlist_tracks(playlist_id, limit=100)
     tracks = results["items"]
 
     audio_features = []
     for item in tracks:
         track = item["track"]
+        if not track or not track.get("id"):
+            continue
+
         af = sp.audio_features(track["id"])[0]
         if af:
             af["name"] = track["name"]
