@@ -1,17 +1,22 @@
-# 🎧 Music Analyst AI Agent
+# === README.md ===
+# AI Music Analyst
 
-An AI assistant for music producers to analyze current Spotify trends and suggest what to look for in up-and-coming artists.
-
-## Features
-
-- Queries **Spotify's "Today's Top Hits"** playlist
-- Uses an **open-source LLM** (e.g., Mistral 7B) via LangChain
-- Summarizes musical trends in **danceability, energy, valence**, etc.
-- Agentic behavior: the AI knows when to query and when to reflect
+This Streamlit app analyzes a Spotify playlist and provides audio feature insights with LLM commentary using Groq + Mixtral.
 
 ## Setup
 
-### 1. Clone the Repo
-```bash
-git clone https://github.com/yourusername/music-analyst-ai.git
-cd music-analyst-ai
+1. Clone the repo
+2. Create a `.env` or set environment variables:
+   ```bash
+   export SPOTIFY_CLIENT_ID=your_client_id
+   export SPOTIFY_CLIENT_SECRET=your_client_secret
+   export GROQ_API_KEY=your_groq_key
+   ```
+3. Run the app:
+   ```bash
+   streamlit run app.py
+   ```
+
+## Deployment
+
+Use [Streamlit Cloud](https://streamlit.io/cloud), and add your secrets to `.streamlit/secrets.toml`.
