@@ -2,3 +2,5 @@ streamlit
 spotipy
 pandas
 plotly
+langchain
+llama-cpp-python
