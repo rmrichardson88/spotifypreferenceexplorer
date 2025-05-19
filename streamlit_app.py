@@ -22,7 +22,7 @@ def get_spotify_client():
         auth_url = sp_oauth.get_authorize_url()
         st.markdown(f"[Click here to log in to Spotify]({auth_url})")
 
-        code = st.experimental_get_query_params().get("code")
+        code = st.query_params.get("code")
         if code:
             code = code[0]
             token_info = sp_oauth.get_access_token(code)
@@ -38,7 +38,6 @@ def get_spotify_client():
 
     sp = spotipy.Spotify(auth=token_info["access_token"])
     return sp
-
 
 st.set_page_config(page_title="AI Music Analyst", layout="centered")
 st.title("\U0001F3B7 AI Music Analyst: Playlist Explorer")
