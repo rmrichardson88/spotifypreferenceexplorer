@@ -15,7 +15,7 @@ def get_playlist_audio_features(playlist_url):
     ))
     
     playlist_id = extract_playlist_id(playlist_url)
-    results = sp.playlist_tracks(playlist_id, limit=100)
+    results = sp.playlist_tracks(playlist_id, limit=100, market="US")
     tracks = results["items"]
 
     audio_features = []
