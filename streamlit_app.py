@@ -4,7 +4,7 @@ from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 from spotify_client import get_playlist_audio_features
 from groq_agent import generate_commentary
 import os
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse
 
 
 SPOTIFY_CLIENT_ID = st.secrets["SPOTIFY_CLIENT_ID"]
