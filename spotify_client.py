@@ -25,7 +25,7 @@ def get_playlist_audio_features(playlist_url):
     for item in tracks:
         track = item["track"]
         if not track or not track.get("id"):
-            continue  # skip unavailable or malformed tracks
+            continue
 
         af = sp.audio_features(track["id"])[0]
         if af:
