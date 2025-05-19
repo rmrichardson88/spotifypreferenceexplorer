@@ -1,6 +1,6 @@
 import streamlit as st
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+from spotipy.oauth2 import SpotifyOAuth, SpotifyOauthError
 from spotify_client import get_playlist_audio_features
 from groq_agent import generate_commentary
 import os
