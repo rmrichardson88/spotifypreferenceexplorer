@@ -1,30 +1,24 @@
 import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 import os
 from urllib.parse import urlparse
 
 def extract_playlist_id(url):
     path = urlparse(url).path
-    parts = path.split("/")
-    if len(parts) < 3 or not parts[-1]:
-        raise ValueError("Invalid Spotify playlist URL.")
-    return parts[-1]
+    return path.split("/")[-1]
 
 def get_playlist_audio_features(playlist_url):
-    client_id = os.getenv("SPOTIFY_CLIENT_ID")
-    client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
-    if not client_id or not client_secret:
-        raise EnvironmentError("Missing Spotify API credentials.")
-
-    sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
-        client_id=client_id,
-        client_secret=client_secret
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+        redirect_uri=os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8888/callback"),
+        scope="playlist-read-private playlist-read-collaborative"
     ))
 
     playlist_id = extract_playlist_id(playlist_url)
     results = sp.playlist_tracks(playlist_id, limit=100, market='US')
-    tracks = results.get("items", [])
+    tracks = results["items"]
 
     if not tracks:
         raise ValueError("The playlist is empty or could not be fetched.")
