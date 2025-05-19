@@ -7,11 +7,10 @@ import os
 from urllib.parse import urlparse
 
 
-SPOTIFY_CLIENT_ID = st.secrets["spotify"]["client_id"]
-SPOTIFY_CLIENT_SECRET = st.secrets["spotify"]["client_secret"]
-REDIRECT_URI = st.secrets["spotify"]["redirect_uri"]
+SPOTIFY_CLIENT_ID = st.secrets["SPOTIFY_CLIENT_ID"]
+SPOTIFY_CLIENT_SECRET = st.secrets["SPOTIFY_CLIENT_SECRET"]
+REDIRECT_URI = st.secrets["SPOTIPY_REDIRECT_URI"]
 scope = "playlist-read-private playlist-read-collaborative"
-REDIRECT_URI = st.secrets["spotify"]["redirect_uri"]
 
 def get_spotify_client():
     sp_oauth = SpotifyOAuth(
