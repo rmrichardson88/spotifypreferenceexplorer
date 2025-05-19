@@ -16,8 +16,12 @@ def generate_commentary(top_attributes):
     """
 
     body = {
-        "model": "mixtral-8x7b-32768",
+        "model": "mistral-saba-24b",
         "messages": [
             {"role": "user", "content": prompt}
         ]
     }
+
+    response = requests.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=body)
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"]
