@@ -12,9 +12,10 @@ def extract_playlist_id(url):
 def get_playlist_audio_features(playlist_url):
     sp_oauth = SpotifyPKCE(
         client_id=os.getenv("SPOTIFY_CLIENT_ID"),
-        redirect_uri="http://localhost/",
+        redirect_uri="https://spotifypreferenceexplorer.streamlit.app/",
         scope="playlist-read-private playlist-read-collaborative"
     )
+
 
     token_info = sp_oauth.get_cached_token()
     if not token_info:
