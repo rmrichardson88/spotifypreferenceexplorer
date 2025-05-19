@@ -6,43 +6,53 @@ from groq_agent import generate_commentary
 import os
 from urllib.parse import urlparse
 
+
+SPOTIFY_CLIENT_ID = st.secrets["spotify"]["client_id"]
+SPOTIFY_CLIENT_SECRET = st.secrets["spotify"]["client_secret"]
+REDIRECT_URI = st.secrets["spotify"]["redirect_uri"]
 scope = "playlist-read-private playlist-read-collaborative"
-redirect_uri = os.getenv("SPOTIFY_REDIRECT_URI")
+REDIRECT_URI = st.secrets["spotify"]["redirect_uri"]
 
 def get_spotify_client():
     sp_oauth = SpotifyOAuth(
-        client_id=os.getenv("SPOTIFY_CLIENT_ID"),
-        client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
-        redirect_uri=redirect_uri,
-        scope=scope,
-        cache_path=None
+        client_id=SPOTIFY_CLIENT_ID,
+        client_secret=SPOTIFY_CLIENT_SECRET,
+        redirect_uri=REDIRECT_URI,
+        scope=SCOPE,
     )
 
-    if "token_info" not in st.session_state:
-        auth_url = sp_oauth.get_authorize_url()
-        st.markdown(f"[Click here to log in to Spotify]({auth_url})")
+    token_info = st.session_state.get("token_info", None)
 
-        code = st.query_params.get("code")
+    if not token_info:
+        code = st.experimental_get_query_params().get("code")
         if code:
             code = code[0]
-            token_info = sp_oauth.get_access_token(code)
-            st.session_state["token_info"] = token_info
-            st.experimental_rerun()
-        return None
-
-    token_info = st.session_state["token_info"]
+            try:
+                access_token = sp_oauth.get_access_token(code, as_dict=False)
+                token_info = sp_oauth.cache_handler.get_cached_token()
+                st.session_state["token_info"] = token_info
+                st.experimental_set_query_params()
+                st.experimental_rerun()
+            except SpotifyOauthError as e:
+                st.error(f"Spotify OAuth error: {e}")
+                return None
+        else:
+            auth_url = sp_oauth.get_authorize_url()
+            st.markdown(f"[Log in with Spotify]({auth_url})")
+            return None
 
     if sp_oauth.is_token_expired(token_info):
-        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
+        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
         st.session_state["token_info"] = token_info
 
-    sp = spotipy.Spotify(auth=token_info["access_token"])
-    return sp
+    access_token = token_info["access_token"]
+    return spotipy.Spotify(auth=access_token)
 
 st.set_page_config(page_title="AI Music Analyst", layout="centered")
 st.title("\U0001F3B7 AI Music Analyst: Playlist Explorer")
 
 sp = get_spotify_client()
+
 
 if sp:
     playlist_url = st.text_input("Enter a Spotify playlist URL (e.g. Today's Top Hits):")
