@@ -14,7 +14,7 @@ This Streamlit app analyzes a Spotify playlist and provides audio feature insigh
    ```
 3. Run the app:
    ```bash
-   streamlit run app.py
+   streamlit run streamlit_app.py
    ```
 
 ## Deployment
