@@ -10,6 +10,7 @@ def extract_playlist_id(playlist_url: str) -> str:
 
 def get_playlist_audio_features(sp, playlist_url: str):
     playlist_id = extract_playlist_id(playlist_url)
+    print(f"Using playlist ID: {playlist_id}")
     results = sp.playlist_tracks(playlist_id, limit=100, market='US')
     tracks = results["items"]
 
