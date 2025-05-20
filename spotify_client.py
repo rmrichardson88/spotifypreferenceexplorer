@@ -1,12 +1,12 @@
 import pandas as pd
 from urllib.parse import urlparse
+import re
 
-def extract_playlist_id(url):
-    try:
-        path = urlparse(url).path
-        return path.split("/")[-1]
-    except Exception:
-        raise ValueError("Invalid Spotify playlist URL.")
+def extract_playlist_id(playlist_url: str) -> str:
+    match = re.search(r"playlist/([a-zA-Z0-9]+)", playlist_url)
+    if match:
+        return match.group(1)
+    raise ValueError("Invalid Spotify playlist URL")
 
 def get_playlist_audio_features(sp, playlist_url):
     playlist_id = extract_playlist_id(playlist_url)
