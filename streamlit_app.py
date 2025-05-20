@@ -774,14 +774,16 @@ Be specific and analytical in your comparison.
         st.header("About AI Music Analyst")
         
         st.markdown("""
-        ## How It Works
-        
-        AI Music Analyst uses the Spotify API to analyze the audio features of tracks in a playlist. 
-        These features include:
-        
-        - **Danceability**: How suitable a track is for dancing (0.0 = least danceable, 1.0 = most danceable)
-        - **Energy**: A measure of intensity and activity (0.0 = least energetic, 1.0 = most energetic)
-        - **Valence**: The musical positiveness conveyed by a track (0.0 = negative, 1.0 = positive)
-        - **Acousticness**: A confidence measure of whether the track is acoustic (0.0 = electric, 1.0 = acoustic)
-        - **Instrumentalness**: Predicts whether a track contains no vocals (1.0 = instrumental)
-        - **Speechiness**: Detects the presence of spoken words (higher values = more spoken content)
+            ## How It Works
+            
+            **AI Music Analyst** uses the Spotify API to analyze the audio features of tracks in any public playlist. These features help describe the musical and emotional qualities of each track:
+            
+            - **Danceability**: How suitable a track is for dancing (0.0 = least danceable, 1.0 = most danceable)
+            - **Energy**: A measure of intensity and activity (0.0 = least energetic, 1.0 = most energetic)
+            - **Valence**: The musical positiveness conveyed by a track (0.0 = sad/serious, 1.0 = happy/cheerful)
+            - **Acousticness**: Confidence measure of whether the track is acoustic (0.0 = electric, 1.0 = acoustic)
+            - **Instrumentalness**: Predicts the likelihood a track has no vocals (1.0 = purely instrumental)
+            - **Speechiness**: Detects the presence of spoken words (higher values = more speech-like content)
+            
+            After connecting your Spotify account, select a playlist to begin exploring its musical DNA through visualizations and AI-generated commentary.
+            """)
