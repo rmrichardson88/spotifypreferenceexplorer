@@ -41,7 +41,7 @@ def get_spotify_client():
         )
         sp = spotipy.Spotify(auth_manager=auth_manager)
         
-        sp.recommendation_genre_seeds()
+        sp.search("test", limit=1)
         return sp
         
     except Exception as e:
