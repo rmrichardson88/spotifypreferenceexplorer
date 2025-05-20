@@ -8,7 +8,7 @@ def extract_playlist_id(playlist_url: str) -> str:
         return match.group(1)
     raise ValueError("Invalid Spotify playlist URL")
 
-def get_playlist_audio_features(sp, playlist_url):
+def get_playlist_audio_features(sp, playlist_url: str):
     playlist_id = extract_playlist_id(playlist_url)
     results = sp.playlist_tracks(playlist_id, limit=100, market='US')
     tracks = results["items"]
