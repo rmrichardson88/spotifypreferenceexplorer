@@ -5,12 +5,15 @@ from spotify_client import get_playlist_audio_features
 from groq_agent import generate_commentary
 import pandas as pd
 
+# Set up page configuration
 st.set_page_config(page_title="AI Music Analyst", layout="centered")
 st.title("\U0001F3B7 AI Music Analyst: Playlist Explorer")
 
+# Create sidebar for authentication info
 with st.sidebar:
     st.header("Authentication Status")
     
+    # Display configuration info
     if 'SPOTIFY_CLIENT_ID' in st.secrets and 'SPOTIFY_CLIENT_SECRET' in st.secrets:
         st.success("✅ Spotify credentials configured")
     else:
@@ -35,13 +38,15 @@ def get_spotify_client():
         SPOTIFY_CLIENT_ID = st.secrets["SPOTIFY_CLIENT_ID"]
         SPOTIFY_CLIENT_SECRET = st.secrets["SPOTIFY_CLIENT_SECRET"]
         
+        # Use basic client credentials flow
         auth_manager = SpotifyClientCredentials(
             client_id=SPOTIFY_CLIENT_ID,
             client_secret=SPOTIFY_CLIENT_SECRET
         )
         sp = spotipy.Spotify(auth_manager=auth_manager)
         
-        sp.search("test", limit=1)
+        # Test with search
+        test = sp.search("test", limit=1)
         return sp
         
     except Exception as e:
@@ -50,13 +55,16 @@ def get_spotify_client():
             st.warning("Authentication failed. Please check your Spotify API credentials.")
         return None
 
+# Initialize Spotify client
 sp = get_spotify_client()
 
 if not sp:
     st.warning("⚠️ Please add valid Spotify credentials to continue.")
 else:
+    # Main UI
     st.markdown("Enter a public Spotify playlist URL to analyze its audio characteristics and get AI-generated insights.")
     
+    # Example URLs
     example_playlists = {
         "Today's Top Hits": "37i9dQZF1DXcBWIGoYBM5M",
         "Peaceful Piano": "37i9dQZF1DXZAiB3NVBWnY",
@@ -106,17 +114,20 @@ else:
                             help=feature_descriptions.get(feature, "")
                         )
                 
+                # Show track listing
                 st.subheader("Tracks in Playlist")
                 if 'name' in df.columns and 'artist' in df.columns:
                     tracks_df = df[['name', 'artist']].reset_index(drop=True)
-                    tracks_df.index = tracks_df.index + 1 
+                    tracks_df.index = tracks_df.index + 1
                     st.dataframe(tracks_df)
                 
+                # LLM Commentary
                 st.subheader("\U0001F916 AI Commentary")
                 with st.spinner("Generating insights..."):
                     commentary = generate_commentary(top_attributes)
                     st.markdown(commentary)
-
+                    
+                # Export options
                 st.download_button(
                     "Download Data as CSV",
                     df.to_csv(index=False).encode('utf-8'),
