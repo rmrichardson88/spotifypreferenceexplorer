@@ -1,3 +1,4 @@
+# === groq_agent.py ===
 import os
 import requests
 import streamlit as st
@@ -53,12 +54,12 @@ Be specific, analytical, and insightful rather than generic.
                 return response.json()["choices"][0]["message"]["content"]
             except requests.exceptions.RequestException as e:
                 if attempt < max_retries - 1:
-                    st.warning(f"API call failed, retrying ({attempt+1}/{max_retries})...")
-                    time.sleep(2)
+                    time.sleep(2 ** attempt)  # exponential backoff
                 else:
-                    st.error(f"Failed to generate commentary after {max_retries} attempts: {str(e)}")
-                    return "Could not generate AI commentary. Please try again later."
-    
+                    st.error("Failed to get a response from Groq after multiple attempts.")
+                    st.error(f"Error: {str(e)}")
+                    return "⚠️ AI Commentary could not be generated due to a network error. Please try again later."
     except Exception as e:
-        st.error(f"Error generating commentary: {str(e)}")
-        return "Could not generate AI commentary due to an error."
+        st.error("Unexpected error generating AI commentary.")
+        st.error(f"Details: {str(e)}")
+        return "⚠️ AI Commentary unavailable due to an unexpected error."
