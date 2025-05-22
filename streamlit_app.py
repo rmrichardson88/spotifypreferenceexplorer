@@ -69,11 +69,11 @@ def auth_spotify():
         return spotipy.Spotify(auth_manager=auth_manager)
     
     # If there's no valid token, we need to get one
-    if 'code' in st.experimental_get_query_params():
-        code = st.experimental_get_query_params()['code'][0]
+    if 'code' in st.query_params:
+        code = st.query_params['code']  # Direct access, no need for [0]
         auth_manager.get_access_token(code)
         st.session_state.authenticated = True
-        st.experimental_set_query_params()
+        st.query_params.clear()  # Clear all query params
         st.rerun()
     
     # If no code and no valid token, we need to show the auth link
