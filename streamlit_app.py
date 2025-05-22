@@ -787,3 +787,5 @@ Be specific and analytical in your comparison.
             
             After connecting your Spotify account, select a playlist to begin exploring its musical DNA through visualizations and AI-generated commentary.
             """)
+if __name__ == "__main__":
+    main()
