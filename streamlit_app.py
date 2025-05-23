@@ -228,7 +228,6 @@ def display_playlist_info(playlist_name, playlist_image_url=None):
 
 def main():
     key_suffix = str(int(time.time() * 1000))
-    """Main application function"""
     # Set up sidebar
     with st.sidebar:
         st.header("Authentication Status")
