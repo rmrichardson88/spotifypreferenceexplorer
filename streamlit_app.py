@@ -102,7 +102,7 @@ def auth_spotify():
     
     return spotipy.Spotify(auth_manager=auth_manager)
 
-def get_user_playlists(sp):
+def get_user_playlists(_sp):
     """Fetch the current user's playlists"""
     if sp is None:
         return []
