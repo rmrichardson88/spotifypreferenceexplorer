@@ -51,7 +51,7 @@ def setup_spotify_oauth():
         client_id=st.secrets["SPOTIFY_CLIENT_ID"],
         client_secret=st.secrets["SPOTIFY_CLIENT_SECRET"],
         redirect_uri=st.secrets.get("SPOTIPY_REDIRECT_URI", "https://spotifypreferenceexplorer.streamlit.app/"),
-        scope="playlist-read-private playlist-read-collaborative user-library-read",
+        scope="user-read-private playlist-read-private user-top-read",
         cache_path=".spotify_cache"
     )
 
