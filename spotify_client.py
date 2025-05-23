@@ -56,7 +56,7 @@ def setup_spotify_oauth():
     )
 
 @st.cache_data(ttl=3600)  # Cache results for 1 hour
-def get_playlist_tracks(sp, playlist_id: str) -> List[Dict[str, Any]]:
+def get_playlist_tracks(_sp, playlist_id: str) -> List[Dict[str, Any]]:
     """
     Get all tracks from a Spotify playlist.
     
@@ -89,7 +89,7 @@ def get_playlist_tracks(sp, playlist_id: str) -> List[Dict[str, Any]]:
         raise
 
 @st.cache_data(ttl=3600)  # Cache results for 1 hour
-def get_audio_features_batch(sp, track_ids: List[str]) -> List[Dict[str, Any]]:
+def get_audio_features_batch(_sp, track_ids: List[str]) -> List[Dict[str, Any]]:
     """
     Get audio features for a batch of tracks.
     
