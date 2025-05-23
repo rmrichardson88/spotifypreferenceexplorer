@@ -4,6 +4,7 @@ from spotipy.oauth2 import SpotifyOAuth
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+import time
 from spotify_client import (
     extract_playlist_id, 
     setup_spotify_oauth,
@@ -226,6 +227,7 @@ def display_playlist_info(playlist_name, playlist_image_url=None):
         st.header(playlist_name)
 
 def main():
+    key_suffix = str(int(time.time() * 1000))
     """Main application function"""
     # Set up sidebar
     with st.sidebar:
@@ -587,7 +589,7 @@ def main():
                 selected_example_1 = st.selectbox(
                     "Select an example playlist:",
                     [""] + list(example_playlists.keys()),
-                    key="example_1"
+                    key=f"example_1_{key_suffix}"
                 )
                 
                 if selected_example_1:
@@ -596,7 +598,7 @@ def main():
                 # Or enter URL manually
                 manual_url_1 = st.text_input(
                     "Or enter a Spotify playlist URL:",
-                    key="manual_url_1"
+                    key=f"manual_url_1_{key_suffix}"
                 )
                 
                 if manual_url_1:
@@ -608,7 +610,7 @@ def main():
                 selected_example_2 = st.selectbox(
                     "Select an example playlist:",
                     [""] + list(example_playlists.keys()),
-                    key="example_2"
+                    key=f"example_2_{key_suffix}"
                 )
                 
                 if selected_example_2:
@@ -617,7 +619,7 @@ def main():
                 # Or enter URL manually
                 manual_url_2 = st.text_input(
                     "Or enter a Spotify playlist URL:",
-                    key="manual_url_2"
+                    key=f"manual_url_2_{key_suffix}"
                 )
                 
                 if manual_url_2:
