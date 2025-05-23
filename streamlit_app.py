@@ -256,7 +256,7 @@ def main():
                 auth_manager.cache_handler.clear()
                 st.session_state.authenticated = False
                 st.session_state.user_data = None
-                st.experimental_rerun()
+                st.rerun()
         
         st.divider()
         st.markdown("### Analysis Options")
