@@ -72,7 +72,7 @@ def get_playlist_tracks(_sp, playlist_id: str) -> List[Dict[str, Any]]:
     """
     try:
         # Get playlist information
-        playlist = sp.playlist(playlist_id)
+        playlist = _sp.playlist(playlist_id)
         
         # Initialize with first batch of tracks
         results = playlist["tracks"]
@@ -80,7 +80,7 @@ def get_playlist_tracks(_sp, playlist_id: str) -> List[Dict[str, Any]]:
         
         # Paginate if there are more tracks
         while results["next"]:
-            results = sp.next(results)
+            results = _sp.next(results)
             tracks.extend(results["items"])
         
         return tracks
@@ -105,14 +105,14 @@ def get_audio_features_batch(_sp, track_ids: List[str]) -> List[Dict[str, Any]]:
     batch_size = 100
     for i in range(0, len(track_ids), batch_size):
         batch = track_ids[i:i+batch_size]
-        batch_features = sp.audio_features(batch)
+        batch_features = _sp.audio_features(batch)
         
         # Add retry logic for API rate limiting
         retry_count = 0
         while batch_features is None and retry_count < 3:
             st.warning(f"Rate limiting detected, retrying in {2**retry_count} seconds...")
             time.sleep(2**retry_count)
-            batch_features = sp.audio_features(batch)
+            batch_features = _sp.audio_features(batch)
             retry_count += 1
             
         if batch_features:
