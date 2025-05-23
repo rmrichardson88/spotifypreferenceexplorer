@@ -73,7 +73,7 @@ def get_playlist_tracks(_sp, playlist_id: str) -> List[Dict[str, Any]]:
     try:
 
         # Get playlist information
-        playlist = _sp.playlist(playlist_id, market='US')
+        playlist = _sp.playlist(playlist_id, market='from_token')
         
         # Initialize with first batch of tracks
         results = playlist["tracks"]
@@ -103,7 +103,7 @@ def get_audio_features_batch(_sp, track_ids: List[str]) -> List[Dict[str, Any]]:
     """
     audio_features = []
     # Process in batches of 100 (Spotify API limit)
-    batch_size = 100
+    batch_size = 25
     for i in range(0, len(track_ids), batch_size):
         batch = track_ids[i:i+batch_size]
         batch_features = _sp.audio_features(batch)
