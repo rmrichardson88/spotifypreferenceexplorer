@@ -226,6 +226,7 @@ def display_playlist_info(playlist_name, playlist_image_url=None):
         st.header(playlist_name)
 
 def main():
+    print("DEBUG: main() called")
     """Main application function"""
     # Set up sidebar
     with st.sidebar:
