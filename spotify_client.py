@@ -71,8 +71,11 @@ def get_playlist_tracks(_sp, playlist_id: str) -> List[Dict[str, Any]]:
         Exception: If playlist cannot be accessed or doesn't exist
     """
     try:
+        #Get user info/market or default to US market
+        user_profile = _sp.current_user()
+        market = user_profile.get('country', 'US') 
         # Get playlist information
-        playlist = _sp.playlist(playlist_id)
+        playlist = _sp.playlist(playlist_id, market=market)
         
         # Initialize with first batch of tracks
         results = playlist["tracks"]
