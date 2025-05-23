@@ -1,7 +1,8 @@
 # === README.md ===
 # AI Music Analyst
 
-[Streamlit Cloud](https://spotifypreferenceexplorer.streamlit.app/)
+[Streamlit App Link](https://spotifypreferenceexplorer.streamlit.app/)
+
 This Streamlit app analyzes a Spotify playlist and provides audio feature insights with LLM commentary using Groq + Mistral.
 
 ## Setup
