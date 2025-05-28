@@ -72,7 +72,8 @@ def auth_spotify():
     # If there's no valid token, we need to get one
     if 'code' in st.query_params:
         code = st.query_params['code']  # Direct access, no need for [0]
-        auth_manager.get_access_token(code)
+        token_info = auth_manager.get_access_token(code, as_dict=True)
+        auth_manager.cache_handler.save_token_to_cache(token_info)
         st.session_state.authenticated = True
         st.query_params.clear()  # Clear all query params
         st.rerun()
